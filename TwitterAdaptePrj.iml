@@ -15,5 +15,7 @@
     <orderEntry type="library" name="itext-pdfa-5.5.5" level="project" />
     <orderEntry type="library" name="com.lowagie.text-2.1.7" level="project" />
     <orderEntry type="library" name="twitter4j-core-4.0.3" level="project" />
+    <orderEntry type="library" name="mysql-connector-java-5.1.17-bin" level="project" />
+    <orderEntry type="library" name="javadoc" level="project" />
   </component>
 </module>
