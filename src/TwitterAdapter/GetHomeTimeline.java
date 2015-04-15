@@ -35,12 +35,14 @@ public class GetHomeTimeline {
             User user = twitter.verifyCredentials();
             List<Status> statuses = twitter.getHomeTimeline();
             System.out.println("Showing @" + user.getScreenName() + "'s home timeline.");
+
+            GetHomeTimeline homeLine = new GetHomeTimeline();
             for (Status status : statuses) {
                 System.out.println("@" + status.getUser().getScreenName() + " - " + status.getText());
                 pdf.tweet(status);
+                homeLine.insertStatusIntoDb(status);
             }
-            GetHomeTimeline homeLine = new GetHomeTimeline();
-            homeLine.setUpNewDatabase();
+
         } catch (TwitterException te) {
             te.printStackTrace();
             System.out.println("Failed to get timeline: " + te.getMessage());
@@ -54,20 +56,15 @@ public class GetHomeTimeline {
         try {
             Connection con = null;
             Class.forName("com.mysql.jdbc.Driver").newInstance() ;
-            //con = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/test", "root", "root");
             con = DriverManager.getConnection("jdbc:mysql://localhost:3306/test", "", "");
             Statement stmt; //创建声明
             stmt = con.createStatement();
 
-            stmt.execute("CREATE table testTable(col1 int, col2 int);");
-            stmt.executeUpdate("INSERT INTO testTable values(12, 20);");
-            ResultSet res = stmt.executeQuery("SELECT * FROM testTable;");
-            while (res.next()) { //循环输出结果集
-                int username = res.getInt("col1");
-                int password = res.getInt("col2");
-                System.out.print("\r\n\r\n");
-                System.out.print("col1:" + username + "col2:" + password);
-            }
+            //stmt.execute("CREATE table testTable(col1 int, col2 int);");
+            //stmt.executeUpdate("INSERT INTO testTable values(12, 20);");
+            //ResultSet res = stmt.executeQuery("SELECT * FROM testTable;");
+
+            //stmt.executeUpdate("CREATE table Home_Time_Line_Table(ID INT NOT NULL AUTO_INCREMENT, tweeterName VARCHAR(30), createDate DATE, tweetContent VARCHAR(200), PRIMARY KEY (ID));");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         } catch (SQLException e) {
@@ -80,7 +77,31 @@ public class GetHomeTimeline {
     }
 
     private boolean insertStatusIntoDb(Status status) {
+        try {
+            Connection con = null;
+            Class.forName("com.mysql.jdbc.Driver").newInstance();
+            con = DriverManager.getConnection("jdbc:mysql://localhost:3306/test", "", "");
+            Statement stmt; //创建声明
+            stmt = con.createStatement();
 
+            String tweeterName = status.getUser().getName();
+            java.util.Date utilDate = status.getCreatedAt();
+            int year = utilDate.getYear() + 1900;
+            String date = "" + year + "-" + utilDate.getMonth() + "-" + utilDate.getDate();
+            java.sql.Date createDate = java.sql.Date.valueOf(date);
+            String tweetContent = status.getText();
+
+            String sqlStatement = "INSERT INTO Home_Time_Line_Table VALUES('" +tweeterName + "','" + createDate +"','" + tweetContent + "')";
+            stmt.execute(sqlStatement);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
         return true;
     }
 }
