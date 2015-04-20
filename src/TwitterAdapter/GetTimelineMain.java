@@ -17,6 +17,10 @@ import java.util.List;
  */
 public class GetTimelineMain {
 
+    private final static String HOME_TIMELINE_TABLE = "Home_Time_Line_Table";
+    private final static String USER_TIMELINE_TABLE = "User_Time_Line_Table";
+    private final static String RETWEETS_TABLE = "Retweets_Table";
+
     public static void main(String[] args) throws IOException, DocumentException, TweetException {
         PdfTwitter pdf = null;
         if(args.length > 1) return;
@@ -52,11 +56,17 @@ public class GetTimelineMain {
             User user = twitter.verifyCredentials();
             Paging paging = new Paging(2, 800);
             List<Status> statuses = twitter.getHomeTimeline(paging);
+            final String tableName;
             if(timelineType == TimelineType.HOME_TIMELINE) {
                 //statuses = twitter.getHomeTimeline();
+                tableName = HOME_TIMELINE_TABLE;
             }
             else if(timelineType == TimelineType.USER_TIMELINE) {
                 statuses = twitter.getUserTimeline(paging);
+                tableName = USER_TIMELINE_TABLE;
+            }
+            else {
+                tableName = "";
             }
             System.out.println("Showing @" + user.getScreenName() + "'s home timeline.");
 
@@ -65,7 +75,7 @@ public class GetTimelineMain {
             for (Status status : statuses) {
                 System.out.println("@" + status.getUser().getScreenName() + " - " + status.getText());
                 pdf.tweet(status);
-                timeline.insertStatusIntoDb(status, timelineType, con);
+                timeline.insertStatusIntoDb(status, timelineType, con, tableName);
             }
 
         } catch (TwitterException te) {
@@ -95,7 +105,25 @@ public class GetTimelineMain {
         return null;
     }
 
-    private boolean insertStatusIntoDb(Status status, TimelineType timelineType, Connection con) {
+    private static List<Status> getRetweetsOfStatus(Twitter twitter,Status tweet) {
+        System.out.println("Showing up to 100 of the first retweets of the status id - [" + tweet.getId() + "].");
+        List<Status> statuses = null;
+        try {
+            statuses = twitter.getRetweets(tweet.getId());
+        } catch (TwitterException e) {
+            e.printStackTrace();
+            return null;
+        }
+        for (Status status : statuses) {
+            System.out.println("@" + status.getUser().getScreenName() + " - " + status.getText());
+        }
+        return statuses;
+    }
+
+    private static boolean insertStatusIntoDb(Status status,
+                                              TimelineType timelineType,
+                                              Connection con, String tableName) {
+        if("" == tableName) return false;
         try {
             //Connection con = null;
             //Class.forName("com.mysql.jdbc.Driver").newInstance();
@@ -110,12 +138,12 @@ public class GetTimelineMain {
             String date = "" + year + "-" + month + "-" + utilDate.getDate();
             java.sql.Date createDate = java.sql.Date.valueOf(date);
             String tweetContent = status.getText().replace("'", " ");
-            String sqlStatement = "INSERT INTO Home_Time_Line_Table VALUES('" + tweeterName + "','" + createDate + "','" + tweetContent + "')";
-            if(timelineType == TimelineType.HOME_TIMELINE) {
+            String sqlStatement = "INSERT INTO " + tableName + " VALUES('" + tweeterName + "','" + createDate + "','" + tweetContent + "')";
+            /*if(timelineType == TimelineType.HOME_TIMELINE) {
             }
             else if(timelineType == TimelineType.USER_TIMELINE) {
                 sqlStatement = "INSERT INTO User_Time_Line_Table VALUES('" + tweeterName + "','" + createDate + "','" + tweetContent + "')";
-            }
+            }*/
             stmt.execute(sqlStatement);
         } catch (SQLException e) {
             e.printStackTrace();
