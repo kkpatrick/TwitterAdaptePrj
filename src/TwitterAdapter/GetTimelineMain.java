@@ -76,7 +76,19 @@ public class GetTimelineMain {
                 System.out.println("@" + status.getUser().getScreenName() + " - " + status.getText());
                 pdf.tweet(status);
                 timeline.insertStatusIntoDb(status, timelineType, con, tableName);
+                List<Status> retweetsStatuses = getRetweetsOfStatus(twitter, status);
+                if(retweetsStatuses.size() == 0) {
+                    System.out.println("no retweets for this tweet.");
+                }
+                else {
+                    System.out.printf("There are %d retweets for this tweet.\n", retweetsStatuses.size());
+                    for (Status retweets : retweetsStatuses) {
+                        System.out.println("@" + retweets.getUser().getScreenName() + " - " + retweets.getText());
+                    }
+                }
             }
+
+
 
         } catch (TwitterException te) {
             te.printStackTrace();

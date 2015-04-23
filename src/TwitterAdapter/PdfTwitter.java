@@ -153,6 +153,9 @@ public class PdfTwitter{
 
 
 }
+    public void open() {
+        document.open();
+    }
     public void close() {
         document.close();
     }
