@@ -86,7 +86,7 @@ public class PdfTwitter{
             // second row
             //table.getDefaultCell().setHorizontalAlignment(Element.ALIGN_LEFT);
             table.getDefaultCell().setHorizontalAlignment(1);
-            table.getDefaultCell().setRotation(90);
+            table.getDefaultCell().setRotation(0);
             table.getDefaultCell().setFixedHeight(34);
             // first column = counter
             table.addCell(String.valueOf(++counter));

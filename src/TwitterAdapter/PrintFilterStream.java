@@ -17,7 +17,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
 public class PrintFilterStream {
-    private final static String DATABASE_TABLE_NAME = "topic1";
+    private static String DATABASE_TABLE_NAME;
     private final static String STATEMENT_CREATE_TABLE = "CREATE TABLE topic1 (\n" +
             "  status_ID VARCHAR(32) NOT NULL ,\n" +
             "  user_ID LONG,\n" +
@@ -32,13 +32,15 @@ public class PrintFilterStream {
             "  is_favorited BOOLEAN,\n" +
             "  favorite_count INT,\n" +
             "  is_possibly_sensitive BOOLEAN,\n" +
+            "  text VARCHAR(200),\n" +
             "  PRIMARY KEY (status_ID)\n" +
             ")";
-    private final static String PDF_FILE_NAME = "File_Topic_1.pdf";
+    private static String PDF_FILE_NAME;
     private final static Connection con = getConnectionToDababase();
     private static PdfTwitter pdf = null;
     private static int statusCount = 0;
-    private final static int maxStatusCount = 100;
+    private final static int maxStatusCount = 10000;
+    private static String topic;
     /**
      * Main entry of this application.
      *
@@ -51,7 +53,27 @@ public class PrintFilterStream {
             System.exit(-1);
         }
 
-        pdf = new PdfTwitter(PDF_FILE_NAME);
+        ArrayList<Long> follow = new ArrayList<Long>();
+        ArrayList<String> track = new ArrayList<String>();
+        for (String arg : args) {
+            if (isNumericalArgument(arg)) {
+                for (String id : arg.split(",")) {
+                    follow.add(Long.parseLong(id));
+                }
+            } else {
+                track.addAll(Arrays.asList(arg.split(",")));
+            }
+        }
+        long[] followArray = new long[follow.size()];
+        for (int i = 0; i < follow.size(); i++) {
+            followArray[i] = follow.get(i);
+        }
+        String[] trackArray = track.toArray(new String[track.size()]);
+
+        DATABASE_TABLE_NAME = trackArray[0].replace(' ', '_');
+        PDF_FILE_NAME = trackArray[0];
+        createDatabaseTable(DATABASE_TABLE_NAME);
+        pdf = new PdfTwitter(PDF_FILE_NAME + ".pdf");
 
         StatusListener listener = new StatusListener() {
             @Override
@@ -113,27 +135,9 @@ public class PrintFilterStream {
 
         TwitterStream twitterStream = new TwitterStreamFactory(cb.build()).getInstance();
         twitterStream.addListener(listener);
-        ArrayList<Long> follow = new ArrayList<Long>();
-        ArrayList<String> track = new ArrayList<String>();
-        for (String arg : args) {
-            if (isNumericalArgument(arg)) {
-                for (String id : arg.split(",")) {
-                    follow.add(Long.parseLong(id));
-                }
-            } else {
-                track.addAll(Arrays.asList(arg.split(",")));
-            }
-        }
-        long[] followArray = new long[follow.size()];
-        for (int i = 0; i < follow.size(); i++) {
-            followArray[i] = follow.get(i);
-        }
-        String[] trackArray = track.toArray(new String[track.size()]);
-
 
         // filter() method internally creates a thread which manipulates TwitterStream and calls these adequate listener methods continuously.
         twitterStream.filter(new FilterQuery(0, followArray, trackArray));
-
     }
 
 
@@ -195,15 +199,53 @@ public class PrintFilterStream {
         final boolean is_possibly_sensitive = status.isPossiblySensitive();
         final String text = status.getText().replace("'", " ");
 
-        final String STATEMENT_INSERT = "INSERT INTO " + DATABASE_TABLE_NAME + " VALUES('" + status_ID + "','" +
+        final String STATEMENT_INSERT = "INSERT INTO " + DATABASE_TABLE_NAME + " VALUES('" +
+                status_ID + "','" +
                 user_ID + "','" +
-                user_name + "','" + create_date + "'," + geo_location_latitude + "," + geo_location_longitude + ",'" + language_code + "'," +
-                is_retweet + "," + is_retweeted + "," + retweet_count + "," + is_favorited + "," + favorit_count + "," + is_possibly_sensitive + ",'" + text + "')";
+                user_name + "','" +
+                create_date + "'," +
+                geo_location_latitude + "," +
+                geo_location_longitude + ",'" +
+                language_code + "'," +
+                is_retweet + "," +
+                is_retweeted + "," +
+                retweet_count + "," +
+                is_favorited + "," +
+                favorit_count + "," +
+                is_possibly_sensitive + ",'" +
+                text + "')";
 
         try {
             Statement stmt; //创建声明
             stmt = con.createStatement();
             stmt.execute(STATEMENT_INSERT);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void createDatabaseTable(String tableName) {
+        Statement stmt;
+        String createSqlStatement = "CREATE TABLE " + tableName + " (\n" +
+                "  status_ID VARCHAR(32) NOT NULL ,\n" +
+                "  user_ID LONG,\n" +
+                "  user_name VARCHAR(50),\n" +
+                "  create_date DATE,\n" +
+                "  geo_location_latitude DOUBLE,\n" +
+                "  geo_location_longitude DOUBLE,\n" +
+                "  language_code VARCHAR(10),\n" +
+                "  is_retweet BOOLEAN,\n" +
+                "  is_retweeted BOOLEAN,\n" +
+                "  retweet_count INT,\n" +
+                "  is_favorited BOOLEAN,\n" +
+                "  favorite_count INT,\n" +
+                "  is_possibly_sensitive BOOLEAN,\n" +
+                "  text VARCHAR(200),\n" +
+                "  PRIMARY KEY (status_ID)\n" +
+                ")";
+        try {
+            stmt = con.createStatement();
+            stmt.execute(createSqlStatement);
         } catch (SQLException e) {
             e.printStackTrace();
         }
