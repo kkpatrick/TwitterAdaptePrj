@@ -260,8 +260,7 @@ public class PrintFilterStream {
     //filter the tweets
     private static boolean isTweetAvailable(Status status) {
         boolean res;
-        if(!status.isRetweet() &&
-                (status.getLang().equals("en"))) {
+        if(!status.isRetweet() && (status.getLang().equals("en"))) {
             res = true;
         }
         else {

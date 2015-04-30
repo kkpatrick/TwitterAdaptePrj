@@ -69,15 +69,15 @@ public class SentimentAnalyzer {
 private String toCss(int sentiment) {
     switch (sentiment) {
         case 0:
-            return "Extremly positive";
+            return "Extremly negative";
         case 1:
-            return "Positive";
+            return "Negative";
         case 2:
             return "Neutral";
         case 3:
-            return "Negative";
+            return "Positive";
         case 4:
-            return "Extremly negative";
+            return "Extremly positive";
         default:
             return "";
     }
