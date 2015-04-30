@@ -41,6 +41,7 @@ public class PrintFilterStream {
     private static int statusCount = 0;
     private final static int maxStatusCount = 10000;
     private static String topic;
+    private static SentimentAnalyzer sentimentAnalyzer;
     /**
      * Main entry of this application.
      *
@@ -74,24 +75,27 @@ public class PrintFilterStream {
         PDF_FILE_NAME = trackArray[0];
         createDatabaseTable(DATABASE_TABLE_NAME);
         pdf = new PdfTwitter(PDF_FILE_NAME + ".pdf");
+        sentimentAnalyzer = new SentimentAnalyzer();
 
         StatusListener listener = new StatusListener() {
             @Override
             public void onStatus(Status status) {
-                statusCount++;
-                if(statusCount < maxStatusCount) {
-                    System.out.println("@" + status.getUser().getScreenName() + " - " + status.getId() + " - " + status.getText());
-                    insertStatusIntoDb(status);
-                    try {
-                        pdf.tweet(status);
-                    } catch (TweetException e) {
-                        e.printStackTrace();
+                if(isTweetAvailable(status)) {
+                    statusCount++;
+                    if (statusCount <= maxStatusCount) {
+                        System.out.println("@" + status.getUser().getScreenName() + " - " + status.getId() + " - " + status.getText());
+                        String sentiment = getSentiment(status);
+                        insertStatusIntoDb(status, sentiment);
+                        try {
+                            pdf.tweet(status);
+                        } catch (TweetException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        System.out.println("Status count reached max value, exit");
+                        pdf.close();
+                        System.exit(0);
                     }
-                }
-                else {
-                    System.out.println("Status count reached max value, exit");
-                    pdf.close();
-                    System.exit(0);
                 }
             }
 
@@ -173,7 +177,7 @@ public class PrintFilterStream {
         return null;
     }
 
-    private static void insertStatusIntoDb(Status status) {
+    private static void insertStatusIntoDb(Status status, String sentiment) {
         final String status_ID = ((Long)(status.getId())).toString();
         final Long user_ID = status.getUser().getId();
         final String user_name = status.getUser().getName();
@@ -197,7 +201,7 @@ public class PrintFilterStream {
         final boolean is_favorited = status.isFavorited();
         final int favorit_count = status.getFavoriteCount();
         final boolean is_possibly_sensitive = status.isPossiblySensitive();
-        final String text = status.getText().replace("'", " ");
+        final String text = status.getText().replace("\'", " ").replace("\"", " ");
 
         final String STATEMENT_INSERT = "INSERT INTO " + DATABASE_TABLE_NAME + " VALUES('" +
                 status_ID + "','" +
@@ -213,7 +217,8 @@ public class PrintFilterStream {
                 is_favorited + "," +
                 favorit_count + "," +
                 is_possibly_sensitive + ",'" +
-                text + "')";
+                text + "','" +
+                sentiment + "')";
 
         try {
             Statement stmt; //创建声明
@@ -241,6 +246,7 @@ public class PrintFilterStream {
                 "  favorite_count INT,\n" +
                 "  is_possibly_sensitive BOOLEAN,\n" +
                 "  text VARCHAR(200),\n" +
+                "  sentiment VARCHAR(50),\n" +
                 "  PRIMARY KEY (status_ID)\n" +
                 ")";
         try {
@@ -249,5 +255,29 @@ public class PrintFilterStream {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    //filter the tweets
+    private static boolean isTweetAvailable(Status status) {
+        boolean res;
+        if(!status.isRetweet() &&
+                (status.getLang().equals("en"))) {
+            res = true;
+        }
+        else {
+            res = false;
+        }
+        return res;
+    }
+
+    private static String getSentiment(Status status) {
+        String sentiment = "";
+        if(status == null) {
+            System.out.printf("getSentiment status is null.\n");
+        }
+        TweetWithSentiment tweetWithSentiment = sentimentAnalyzer.findSentiment(status.getText());
+        sentiment = tweetWithSentiment.getCssClass();
+        System.out.println("%n" + sentiment);
+        return sentiment;
     }
 }
